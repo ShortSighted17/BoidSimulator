@@ -9,12 +9,11 @@ class Flock {
         this.cellSize = 50;
         this.cols = Math.ceil(width / this.cellSize);
         this.rows = Math.ceil(height / this.cellSize);
-
         this.grid = [];
     }
 
-     // Clears and repopulates the grid
-     buildSpatialGrid() {
+    // Clears and repopulates the grid
+    buildSpatialGrid() {
         this.grid = Array.from({ length: this.cols }, () =>
             Array.from({ length: this.rows }, () => [])
         );
