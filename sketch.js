@@ -1,5 +1,5 @@
 // some global variables
-let numberOfBoids = 100;
+let numberOfBoids = 500;
 let flock;
 
 // sliders
@@ -35,7 +35,7 @@ function setup() {
     row3.child(createDiv("Separation Weight"));
     row3.child(sepWeightSlider = createSlider(0, 5, 2.0, 0.1));
     row3.child(createDiv("Cohesion Weight"));
-    row3.child(cohWeightSlider = createSlider(0, 5, 0.5, 0.1));
+    row3.child(cohWeightSlider = createSlider(0, 5, 1.3, 0.1));
     row3.child(createDiv("Alignment Weight"));
     row3.child(alignWeightSlider = createSlider(0, 5, 1.0, 0.1));
     // </sliders>

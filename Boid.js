@@ -51,9 +51,9 @@ class Boid {
         stroke(255);
         strokeWeight(1);
         beginShape();
-        vertex(12, 0);     // tip
-        vertex(-8, 5);     // left base
-        vertex(-8, -5);    // right base
+        vertex(5, 0);     // tip
+        vertex(-3, 2);     // left base
+        vertex(-3, -2);    // right base
         endShape(CLOSE);
 
         pop();
