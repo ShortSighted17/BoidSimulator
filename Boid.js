@@ -1,26 +1,19 @@
-// some global variables
-const MAX_SPEED = 2;
-const MAX_FORCE = 1;
-const MAX_STEER = 0.1;
-const seperationFactor = 20;
-const SEPERATION_WEIGHT = 2.0;
-const ALIGNMENT_WEIGHT = 1.0;
-const COHESION_WEIGHT = 0.5;
 
 class Boid {
     constructor() {
         this.position = createVector(random(width), random(height));
         this.velocity = createVector(random(-1, 1), random(-1, 1)); // initial velocity is random
         this.acceleration = createVector();
-        this.force = createVector();
+        this.steering = createVector();
         this.neighbors = []; // an array of boids in sight. [[neighbor, distance]...]
         this.debugSteer = {
-            separation: createVector(),
-            alignment: createVector(),
-            cohesion: createVector()
+            separationForce: createVector(),
+            alignmentForce: createVector(),
+            cohesionForce: createVector()
         };
     }
 
+    // defines behaviour when getting to an edge
     edges() {
         if (this.position.x > width) {
             this.position.x = 0;
@@ -34,6 +27,7 @@ class Boid {
         }
     }
 
+    // debug purposes: will use that to draw the different force vectors
     drawVector(vec, col) {
         push();
         stroke(col);
@@ -45,7 +39,7 @@ class Boid {
     }
 
     // draws the boid on the screen.
-    // how is the boid represented?
+    // how is the boid represented? (currently a triangle)
     show() {
         // Setup
         push();
@@ -65,75 +59,90 @@ class Boid {
         pop();
 
         // Draw debug vectors
-        this.drawVector(this.debugSteer.separation, color(255, 0, 0));   // red
-        this.drawVector(this.debugSteer.alignment, color(0, 255, 0));    // green
-        this.drawVector(this.debugSteer.cohesion, color(0, 100, 255));   // blue
+        if (debug){
+            this.drawVector(this.debugSteer.separationForce, color(255, 0, 0));   // red
+            this.drawVector(this.debugSteer.alignmentForce, color(0, 255, 0));    // green
+            this.drawVector(this.debugSteer.cohesionForce, color(0, 100, 255));   // blue
+        }
     }
 
-    // updates the boid's parameters
     update() {
-        this.seperate();
+        this.separate();
         this.align();
         this.cohere();
-        this.acceleration.add(this.force);
-        this.velocity.add(this.acceleration);
-        this.velocity.limit(MAX_SPEED); // scale back velocity if needed
+        this.acceleration.add(this.steering);
+
+        let desiredVelocity = p5.Vector.add(this.velocity, this.acceleration);
+        this.velocity.lerp(desiredVelocity, 0.1); // lower = smoother
+        // this.velocity.add(this.acceleration);
+
+        this.velocity.limit(Boid.MAX_SPEED);
         this.position.add(this.velocity);
-        this.force.mult(0); // zero out the force for next iteration
         this.acceleration.mult(0);
+        this.steering.mult(0);
     }
 
-    // defining seperation behaviour
-    seperate() {
+    // globals are now controlled through the sliders
+    static updateGlobals(values) {
+        Boid.MAX_SPEED = values.maxSpeed;
+        Boid.MAX_FORCE = values.maxForce;
+    
+        Boid.SEPERATION_RADIUS = values.sepRadius;
+        Boid.ALIGNMENT_RADIUS = values.alignRadius;
+        Boid.COHESION_RADIUS = values.cohRadius;
+    
+        Boid.SEPERATION_WEIGHT = values.sepWeight;
+        Boid.ALIGNMENT_WEIGHT = values.alignWeight;
+        Boid.COHESION_WEIGHT = values.cohWeight;
+    }
+
+
+    // defining separation behaviour
+    separate() {
         if (this.neighbors.length === 0) return;
 
-        let steer = createVector();
+        let separationForce = createVector();
         let total = 0;
 
         for (let [other, distance] of this.neighbors) {
-            if (distance > 0 && distance < seperationFactor) {
-                // Vector pointing away from the neighbor
+            if (distance > 0 && distance < Boid.SEPERATION_RADIUS) {
                 let diff = p5.Vector.sub(this.position, other.position);
-                let clampedDist = constrain(distance, 1, seperationFactor);
-                diff.div(clampedDist * clampedDist);
-                steer.add(diff);
+                diff.div(distance * distance);
+                separationForce.add(diff);
                 total++;
             }
         }
 
         if (total > 0) {
-            steer.div(total); // average the steer
-            steer.setMag(MAX_SPEED);
-            steer.sub(this.velocity);
-            steer.limit(MAX_STEER); // tweak to control how hard it pushes
-            this.debugSteer.separation = steer.copy(); // store for debug
-            this.force.add(steer.mult(SEPERATION_WEIGHT));
+            separationForce.div(total); // average the steer
+            separationForce.setMag(Boid.MAX_SPEED);
+            separationForce.sub(this.velocity);
+            separationForce.limit(Boid.MAX_FORCE);
+            this.debugSteer.separationForce = separationForce.copy(); // store for debug
+            this.steering.add(separationForce.mult(Boid.SEPERATION_WEIGHT));
         }
     }
 
-    // defining alginment behaviour
     align() {
         if (this.neighbors.length === 0) return;
 
-        let averageVelocity = createVector();
+        let alignmentForce = createVector();
         let total = 0;
 
         for (let [other, distance] of this.neighbors) {
-            if (distance > 0) {
-                averageVelocity.add(other.velocity);
+            if (distance > 0 && distance < Boid.ALIGNMENT_RADIUS) {
+                alignmentForce.add(other.velocity);
                 total++;
             }
         }
 
         if (total > 0) {
-            averageVelocity.div(total); // get average velocity of neighbors
-
-            // steering = desired - current velocity
-            averageVelocity.setMag(MAX_SPEED); // boid will want to go full speed in the average direction
-            let steer = p5.Vector.sub(averageVelocity, this.velocity); // the boid steers to crrect current velocity
-            steer.limit(MAX_STEER); // prevent wild steering
-            this.debugSteer.alignment = steer.copy();
-            this.force.add(steer.mult(ALIGNMENT_WEIGHT));
+            alignmentForce.div(total); // get average velocity of neighbors
+            alignmentForce.setMag(Boid.MAX_SPEED); // boid will want to go full speed in the average direction
+            alignmentForce.sub(this.velocity); // the boid steers to crrect current velocity
+            alignmentForce.limit(Boid.MAX_FORCE); // prevent wild steering
+            this.debugSteer.alignmentForce = alignmentForce.copy();
+            this.steering.add(alignmentForce.mult(Boid.ALIGNMENT_WEIGHT));
         }
     }
 
@@ -141,25 +150,24 @@ class Boid {
     cohere() {
         if (this.neighbors.length === 0) return;
 
-        let averagePosition = createVector();
+        let cohesionForce = createVector();
         let total = 0;
 
         for (let [other, distance] of this.neighbors) {
-            if (distance > 0) {
-                averagePosition.add(other.position);
+            if (distance > 0 && distance < Boid.COHESION_RADIUS) {
+                cohesionForce.add(other.position);
                 total++;
             }
         }
 
         if (total > 0) {
-            averagePosition.div(total); // get average position of neighbors (center of mass)
-            let desired = p5.Vector.sub(averagePosition, this.position);
-            desired.setMag(MAX_SPEED); // where we want to go
-
-            let steer = p5.Vector.sub(desired, this.velocity); // how we correct our current direction
-            steer.limit(MAX_STEER); // cap turning power
-            this.debugSteer.cohesion = steer.copy();
-            this.force.add(steer.mult(COHESION_WEIGHT));
+            cohesionForce.div(total); // get average position of neighbors (center of mass)
+            cohesionForce.sub(this.position);
+            cohesionForce.setMag(Boid.MAX_SPEED); // where we want to go
+            cohesionForce.sub(this.velocity);
+            cohesionForce.limit(Boid.MAX_FORCE);
+            this.debugSteer.cohesionForce = cohesionForce.copy();
+            this.steering.add(cohesionForce.mult(Boid.COHESION_WEIGHT));
         }
     }
 }

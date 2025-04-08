@@ -12,7 +12,7 @@ class Flock {
     }
 
     updateNeighbors() {
-        const sight = 25;
+        const sight = 50;
     
         for (let boid of this.boids) {
             boid.neighbors = []; // clear previous neighbors
