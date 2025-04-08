@@ -33,7 +33,7 @@ class Boid {
     align() {
         let sight = 80;
         let average = createVector(); // (0, 0)
-        for (let flockMember of this.boids) {
+        for (let flockMember of boids) {
             let inSight = 0;
             let d = dist(this.position.x, this.position.y, flockMember.position.x, flockMember.position.y)
             if (d <= sight) {
