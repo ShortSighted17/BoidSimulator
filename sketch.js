@@ -1,5 +1,5 @@
 // some global variables
-let numberOfBoids = 50;
+let numberOfBoids = 100;
 let flock;
 
 
