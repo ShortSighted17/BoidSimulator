@@ -1,5 +1,6 @@
 // some global variables
-numberOfBoids = 300;
+let numberOfBoids = 50;
+let flock;
 
 
 function setup() {
@@ -9,8 +10,13 @@ function setup() {
 
 function draw() {
     background(40);
+
+    console.log("DRAWING...")
+
+    flock.updateNeighbors();
     
     for (let boid of flock){
+        boid.edges();
         boid.update();
         boid.show();
     }

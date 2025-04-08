@@ -11,5 +11,23 @@ class Flock {
         return this.boids.values();
     }
 
-
+    updateNeighbors() {
+        const sight = 80;
+    
+        for (let boid of this.boids) {
+            boid.neighbors = []; // clear previous neighbors
+    
+            for (let other of this.boids) {
+                if (boid !== other) {
+                    let d = dist(
+                        boid.position.x, boid.position.y,
+                        other.position.x, other.position.y
+                    );
+                    if (d <= sight) {
+                        boid.neighbors.push([other, d]); // tuple: [boid, distance]
+                    }
+                }
+            }
+        }
+    }
 }
